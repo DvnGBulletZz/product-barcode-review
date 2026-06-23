@@ -70,8 +70,9 @@ searchForm.onsubmit = async (e) => {
         <div style="flex:1"><div>${p.product_name}</div><div class="muted">${p.brands || ''}</div></div>
         <span class="badge ${nsColor(p.nutriscore_grade)}">${(p.nutriscore_grade || '?').toUpperCase()}</span>
       </div>`).join('') + '</div>';
+    // full lookup by barcode so the verdict matches scanning (search data is partial)
     searchResults.querySelectorAll('.result-item').forEach(el =>
-      el.onclick = () => { searchResults.innerHTML = ''; render(items[+el.dataset.i]); });
+      el.onclick = () => { searchResults.innerHTML = ''; lookup(items[+el.dataset.i].code); });
   } catch (e) { searchResults.innerHTML = '<div class="card glass muted">Zoeken mislukt. Controleer je verbinding.</div>'; }
 };
 
@@ -158,24 +159,51 @@ function render(p) {
 
 function nsColor(g) { g = (g || '').toLowerCase(); return (g === 'a' || g === 'b') ? 'green' : g === 'c' ? 'orange' : 'red'; }
 
+const gradeRank = (g) => ({ a: 1, b: 2, c: 3, d: 4, e: 5 })[(g || '').toLowerCase()] || 99;
+const normName = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
 async function loadAlternatives(p) {
-  const cat = (p.categories_tags || []).slice(-1)[0]; // most specific
   const box = $('alts');
-  if (!cat) { box.innerHTML = '<div class="muted">Geen categorie om alternatieven te zoeken.</div>'; return; }
-  try {
-    const url = `${OFF}/search?categories_tags=${encodeURIComponent(cat)}&sort_by=nutriscore_score&page_size=12&fields=${FIELDS}`;
-    const j = await (await fetch(url)).json();
-    const cur = (p.nutriscore_grade || 'z').toLowerCase();
-    const better = (j.products || [])
-      .filter(x => x.code !== p.code && x.nutriscore_grade && x.nutriscore_grade.toLowerCase() < cur && x.product_name)
-      .slice(0, 5);
-    box.innerHTML = '<h3 style="margin-top:0">Betere alternatieven</h3>' + (better.length
-      ? better.map(x => `<div class="alt">
-          ${x.image_front_small_url ? `<img src="${x.image_front_small_url}">` : '<div style="width:44px;height:44px"></div>'}
-          <div style="flex:1"><div>${x.product_name}</div><div class="muted">${x.brands || ''}</div></div>
-          <span class="badge ${nsColor(x.nutriscore_grade)}">${x.nutriscore_grade.toUpperCase()}</span></div>`).join('')
-      : '<div class="muted">Geen betere alternatieven gevonden in deze categorie.</div>');
-  } catch (e) { box.innerHTML = '<div class="muted">Alternatieven laden mislukt.</div>'; }
+  const cats = p.categories_tags || [];
+  if (!cats.length) { box.innerHTML = '<div class="muted">Geen categorie om alternatieven te zoeken.</div>'; return; }
+
+  const cur = gradeRank(p.nutriscore_grade);
+  const seen = new Set([p.code, normName(p.product_name)]);
+  const better = [];
+
+  // Walk categories from most specific to broadest, collecting strictly-better,
+  // non-duplicate products until we have 5. Broadening guarantees we find
+  // something better (e.g. a cola falls back to sodas, then to beverages → water).
+  for (let i = cats.length - 1; i >= 0 && better.length < 5; i--) {
+    let products;
+    try {
+      const url = `${OFF}/search?categories_tags=${encodeURIComponent(cats[i])}&sort_by=nutriscore_score&page_size=40&fields=${FIELDS}`;
+      products = (await (await fetch(url)).json()).products || [];
+    } catch { continue; }
+    for (const x of products) {
+      if (better.length >= 5) break;
+      if (!x.product_name || gradeRank(x.nutriscore_grade) >= cur) continue; // must be strictly better
+      const key = normName(x.product_name);
+      if (seen.has(x.code) || seen.has(key)) continue; // ponytail: name-normalised dedup; misses spelling variants
+      seen.add(x.code); seen.add(key);
+      better.push(x);
+    }
+  }
+
+  box.innerHTML = '<h3 style="margin-top:0">Betere alternatieven</h3>' + (better.length
+    ? better.map(x => `<div class="alt result-item" data-code="${x.code}">
+        ${x.image_front_small_url ? `<img src="${x.image_front_small_url}">` : '<div style="width:44px;height:44px"></div>'}
+        <div style="flex:1"><div>${x.product_name}</div><div class="muted">${x.brands || ''}</div></div>
+        <span class="badge ${nsColor(x.nutriscore_grade)}">${x.nutriscore_grade.toUpperCase()}</span></div>`).join('')
+    : (cur <= 2 ? '<div class="muted">Dit is al een goede keuze 👍</div>'
+                : '<div class="muted">Geen beter alternatief gevonden.</div>'));
+  box.querySelectorAll('.result-item').forEach(el =>
+    el.onclick = () => lookup(el.dataset.code));
 }
 
 function show(msg) { statusEl.textContent = msg; statusEl.classList.remove('hidden'); }
+
+// self-check: console.assert is silent on success
+console.assert(gradeRank('a') < gradeRank('e'), 'a must rank better than e');
+console.assert(gradeRank(null) === 99, 'missing grade ranks worst');
+console.assert(normName('Coca-Cola Zero') === normName('coca cola zero'), 'name dedup ignores case/punctuation');

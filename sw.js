@@ -1,5 +1,5 @@
 // Minimal app-shell cache so the PWA opens offline. Bump VERSION to invalidate.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL = ['.', 'index.html', 'app.js', 'manifest.json', 'icon.svg', 'assets/rules.json'];
 
 self.addEventListener('install', (e) => {
