@@ -161,42 +161,57 @@ function nsColor(g) { g = (g || '').toLowerCase(); return (g === 'a' || g === 'b
 
 const gradeRank = (g) => ({ a: 1, b: 2, c: 3, d: 4, e: 5 })[(g || '').toLowerCase()] || 99;
 const normName = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const tokenSet = (s) => new Set((s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1));
+const brandSet = (p) => new Set((p.brands || '').split(',').map(normName).filter(Boolean));
+const additiveCount = (p) => (p.additives_tags || []).length;
+const hasNutrientData = (p) => { const n = p.nutriments || {}; return n.sugars_100g != null || n['energy-kcal_100g'] != null || n.salt_100g != null || n.fat_100g != null; };
+function jaccard(a, b) { if (!a.size || !b.size) return 0; let i = 0; for (const w of a) if (b.has(w)) i++; return i / (a.size + b.size - i); }
+// Our own score from raw nutriments — ignores OFF's (often fake) nutriscore grade.
+function penalty(p) {
+  const s = analyze(p).flags.reduce((t, f) => t + (f.severity === 'high' ? 3 : f.severity === 'medium' ? 1.5 : 0.5), 0);
+  return s + ((p.nova_group || 0) >= 4 ? 2 : 0);
+}
 
 async function loadAlternatives(p) {
   const box = $('alts');
   const cats = p.categories_tags || [];
   if (!cats.length) { box.innerHTML = '<div class="muted">Geen categorie om alternatieven te zoeken.</div>'; return; }
 
-  const cur = gradeRank(p.nutriscore_grade);
+  const pPenalty = penalty(p), pAdd = additiveCount(p), pBrands = brandSet(p), pTokens = tokenSet(p.product_name);
   const seen = new Set([p.code, normName(p.product_name)]);
-  const better = [];
+  const out = [];
 
-  // Walk categories from most specific to broadest, collecting strictly-better,
-  // non-duplicate products until we have 5. Broadening guarantees we find
-  // something better (e.g. a cola falls back to sodas, then to beverages → water).
-  for (let i = cats.length - 1; i >= 0 && better.length < 5; i--) {
+  // Walk categories specific→broad, keep only realistically-better products.
+  for (let i = cats.length - 1; i >= 0 && out.length < 5; i--) {
     let products;
     try {
       const url = `${OFF}/search?categories_tags=${encodeURIComponent(cats[i])}&sort_by=nutriscore_score&page_size=40&fields=${FIELDS}`;
       products = (await (await fetch(url)).json()).products || [];
     } catch { continue; }
     for (const x of products) {
-      if (better.length >= 5) break;
-      if (!x.product_name || gradeRank(x.nutriscore_grade) >= cur) continue; // must be strictly better
+      if (out.length >= 5) break;
+      if (!x.product_name || !x.code) continue;
       const key = normName(x.product_name);
-      if (seen.has(x.code) || seen.has(key)) continue; // ponytail: name-normalised dedup; misses spelling variants
+      if (seen.has(x.code) || seen.has(key)) continue;
+      if (!hasNutrientData(x)) continue;                                  // no data = can't trust, likely fake
+      if ([...brandSet(x)].some(b => pBrands.has(b))) continue;          // same brand = same product line, skip
+      if (jaccard(pTokens, tokenSet(x.product_name)) >= 0.5) continue;   // near-same name (Max vs Max Cherry)
+      if (additiveCount(x) > pAdd) continue;                             // no extra additives ("weird shit")
+      if (penalty(x) > pPenalty - 1) continue;                           // meaningfully cleaner by our own scoring
       seen.add(x.code); seen.add(key);
-      better.push(x);
+      out.push(x);
     }
   }
+  out.sort((a, b) => penalty(a) - penalty(b) || additiveCount(a) - additiveCount(b));
 
-  box.innerHTML = '<h3 style="margin-top:0">Betere alternatieven</h3>' + (better.length
-    ? better.map(x => `<div class="alt result-item" data-code="${x.code}">
+  box.innerHTML = '<h3 style="margin-top:0">Betere alternatieven</h3>' + (out.length
+    ? out.map(x => { const g = (x.nutriscore_grade || '').toUpperCase();
+        return `<div class="alt result-item" data-code="${x.code}">
         ${x.image_front_small_url ? `<img src="${x.image_front_small_url}">` : '<div style="width:44px;height:44px"></div>'}
         <div style="flex:1"><div>${x.product_name}</div><div class="muted">${x.brands || ''}</div></div>
-        <span class="badge ${nsColor(x.nutriscore_grade)}">${x.nutriscore_grade.toUpperCase()}</span></div>`).join('')
-    : (cur <= 2 ? '<div class="muted">Dit is al een goede keuze 👍</div>'
-                : '<div class="muted">Geen beter alternatief gevonden.</div>'));
+        <span class="badge ${analyze(x).color}">${g || '✓'}</span></div>`; }).join('')
+    : (pPenalty <= 1 ? '<div class="muted">Dit is al een schone keuze 👍</div>'
+                     : '<div class="muted">Geen realistisch beter alternatief gevonden.</div>'));
   box.querySelectorAll('.result-item').forEach(el =>
     el.onclick = () => lookup(el.dataset.code));
 }
@@ -207,3 +222,5 @@ function show(msg) { statusEl.textContent = msg; statusEl.classList.remove('hidd
 console.assert(gradeRank('a') < gradeRank('e'), 'a must rank better than e');
 console.assert(gradeRank(null) === 99, 'missing grade ranks worst');
 console.assert(normName('Coca-Cola Zero') === normName('coca cola zero'), 'name dedup ignores case/punctuation');
+console.assert(jaccard(tokenSet('Pepsi Max'), tokenSet('Pepsi Max Cherry')) >= 0.5, 'near-same variant rejected');
+console.assert(jaccard(tokenSet('Barilla pasta'), tokenSet('Volkoren organic pasta')) < 0.5, 'real alternative kept');
