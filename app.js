@@ -26,7 +26,10 @@ startBtn.onclick = async () => {
       (res) => { if (res) { stopScan(); lookup(res.getText()); } }
     );
   } catch (e) {
-    show('Geen camera-toegang. Sta de camera toe en gebruik HTTPS.');
+    const hint = !window.isSecureContext ? ' (geen HTTPS)'
+      : window.navigator.standalone ? ' (open in Safari, niet vanaf beginscherm)'
+      : '';
+    show(`Camera mislukt: ${e.name || e.message}${hint}`);
     stopScan();
   }
 };
