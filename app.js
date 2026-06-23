@@ -7,7 +7,7 @@ let reader = null;
 
 const $ = (id) => document.getElementById(id);
 const startBtn = $('startBtn'), stopBtn = $('stopBtn'), readerEl = $('reader'),
-      statusEl = $('status'), resultEl = $('result');
+      videoEl = $('video'), statusEl = $('status'), resultEl = $('result');
 
 // ---- load rules + register service worker ----
 fetch('assets/rules.json').then(r => r.json()).then(j => rules = j).catch(() => rules = { additives: [], thresholds_per_100g: {}, nova_ultraprocessed_flag: 4 });
@@ -22,7 +22,7 @@ startBtn.onclick = async () => {
   resultEl.innerHTML = '';
   try {
     await reader.decodeFromConstraints(
-      { video: { facingMode: 'environment' } }, readerEl,
+      { video: { facingMode: 'environment' } }, videoEl,
       (res) => { if (res) { stopScan(); lookup(res.getText()); } }
     );
   } catch (e) {
