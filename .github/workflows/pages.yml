@@ -30,5 +30,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          retention-days: 1   # artifact is deploy-only; don't let it linger
       - id: deploy
         uses: actions/deploy-pages@v4
