@@ -6,50 +6,120 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Scanner" />
-  <meta name="theme-color" content="#16a34a" />
+  <meta name="theme-color" content="#0b0f0c" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <title>Product Scanner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, system-ui, sans-serif; background: #0b0f0c; color: #f1f5f4;
-           padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); min-height: 100vh; }
-    h1 { font-size: 20px; padding: 14px 0; text-align: center; }
-    button { font: inherit; border: 0; border-radius: 14px; padding: 16px; width: 100%;
-             background: #16a34a; color: #fff; font-weight: 600; cursor: pointer; }
-    button.secondary { background: #1f2937; }
-    #reader { width: 100%; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 12px; }
-    #reader video { width: 100% !important; height: auto !important; display: block; }
+    :root { --accent: #22c55e; --glass: rgba(255,255,255,.07); --stroke: rgba(255,255,255,.14); }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, system-ui, sans-serif; color: #f1f5f4;
+      background: #06080a; min-height: 100vh; overflow-x: hidden;
+      padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 110px);
+    }
+    /* liquid-glass backdrop: blurred colour blobs the glass refracts over */
+    .bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+    .bg::before, .bg::after {
+      content: ''; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%;
+      filter: blur(80px); opacity: .55;
+    }
+    .bg::before { background: #16a34a; top: -20vmax; left: -15vmax; }
+    .bg::after { background: #0ea5e9; bottom: -25vmax; right: -20vmax; }
+
+    h1 { font-size: 22px; font-weight: 700; padding: 18px 4px 8px; letter-spacing: -.02em; }
+
+    /* glass surface mixin via class */
+    .glass {
+      background: var(--glass);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid var(--stroke);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 10px 30px rgba(0,0,0,.35);
+    }
+
     .hidden { display: none !important; }
-    .card { background: #111816; border: 1px solid #1f2a26; border-radius: 16px; padding: 16px; margin-top: 12px; }
+
+    #reader { width: 100%; border-radius: 24px; overflow: hidden; background: #000; margin-bottom: 12px; }
+    #reader video { width: 100% !important; height: auto !important; display: block; }
+
+    .search-bar { display: flex; gap: 8px; align-items: center; border-radius: 20px; padding: 6px 6px 6px 16px; }
+    .search-bar input { flex: 1; background: transparent; border: 0; color: #f1f5f4; font: inherit; padding: 12px 0; outline: none; }
+    .search-bar input::placeholder { color: #8aa39c; }
+    .search-bar button { border: 0; border-radius: 16px; padding: 12px 16px; background: var(--accent); color: #04130a; font-weight: 700; }
+
+    .card { border-radius: 24px; padding: 18px; margin-top: 14px; }
     .verdict { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
     .dot { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto; }
     .green { background: #22c55e; } .orange { background: #f59e0b; } .red { background: #ef4444; }
-    .muted { color: #94a3a0; font-size: 13px; }
+    .muted { color: #b6c6c1; font-size: 13px; }
     .row { display: flex; gap: 10px; align-items: center; }
     .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
-    .stat { background: #0e1412; border-radius: 12px; padding: 10px; text-align: center; }
-    .stat b { display: block; font-size: 17px; } .stat span { font-size: 11px; color: #94a3a0; }
-    .flag { padding: 8px 10px; border-radius: 10px; margin-top: 6px; font-size: 13px; }
-    .flag.high { background: #3a1413; border: 1px solid #ef444455; }
-    .flag.medium { background: #3a2c10; border: 1px solid #f59e0b55; }
-    .flag.low { background: #16201c; border: 1px solid #334155; }
-    .alt { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #1f2a26; }
-    .alt img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: #fff; }
+    .stat { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 10px; text-align: center; }
+    .stat b { display: block; font-size: 17px; } .stat span { font-size: 11px; color: #b6c6c1; }
+    .flag { padding: 8px 10px; border-radius: 12px; margin-top: 6px; font-size: 13px; }
+    .flag.high { background: rgba(239,68,68,.18); border: 1px solid #ef444466; }
+    .flag.medium { background: rgba(245,158,11,.16); border: 1px solid #f59e0b66; }
+    .flag.low { background: rgba(255,255,255,.06); border: 1px solid #ffffff22; }
+    .alt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.1); }
+    .alt img { width: 44px; height: 44px; object-fit: contain; border-radius: 10px; background: #fff; }
     .badge { font-weight: 700; text-transform: uppercase; border-radius: 8px; padding: 2px 8px; font-size: 12px; }
+    .badge.green { background: #22c55e; color: #04130a; } .badge.orange { background: #f59e0b; color: #2a1a02; } .badge.red { background: #ef4444; color: #2a0606; }
     h3 { font-size: 15px; margin-top: 14px; }
-    .spin { text-align: center; padding: 20px; color: #94a3a0; }
+    .spin { text-align: center; padding: 20px; color: #b6c6c1; }
+    .result-item { cursor: pointer; }
+
+    /* rounded glass dock */
+    .dock {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(env(safe-area-inset-bottom) + 14px);
+      display: flex; align-items: center; gap: 28px;
+      padding: 10px 26px; border-radius: 40px; z-index: 10;
+    }
+    .dock .tab {
+      background: none; border: 0; color: #cfe3dc; font: inherit; font-size: 11px; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; opacity: .7;
+    }
+    .dock .tab.active { opacity: 1; color: #fff; }
+    .dock .tab svg { width: 24px; height: 24px; }
+    .dock .scan {
+      width: 64px; height: 64px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3);
+      background: radial-gradient(circle at 30% 25%, #4ade80, #16a34a 70%);
+      color: #04130a; display: flex; align-items: center; justify-content: center;
+      margin-top: -26px; box-shadow: 0 8px 24px rgba(22,163,74,.5), inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    .dock .scan svg { width: 30px; height: 30px; }
   </style>
 </head>
 <body>
+  <div class="bg"></div>
   <h1>🛒 Product Scanner</h1>
 
-  <div id="reader" class="hidden"><video id="video" playsinline muted></video></div>
-  <button id="startBtn">📷 Scan barcode</button>
-  <button id="stopBtn" class="secondary hidden" style="margin-top:8px">Stop scannen</button>
+  <section id="searchView">
+    <form id="searchForm" class="search-bar glass">
+      <input id="q" type="search" enterkeyhint="search" placeholder="Zoek een product…" autocomplete="off" />
+      <button type="submit">Zoek</button>
+    </form>
+    <div id="searchResults"></div>
+  </section>
+
+  <section id="scanView" class="hidden">
+    <div id="reader" class="hidden"><video id="video" playsinline muted></video></div>
+  </section>
 
   <div id="status" class="spin hidden"></div>
   <div id="result"></div>
+
+  <nav class="dock glass">
+    <button class="tab active" data-tab="search" id="tabSearch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      Zoek
+    </button>
+    <button class="scan" id="scanBtn" aria-label="Scan barcode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M4 12h16"/></svg>
+    </button>
+  </nav>
 
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
   <script src="app.js"></script>

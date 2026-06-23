@@ -6,20 +6,33 @@ let rules = null;
 let reader = null;
 
 const $ = (id) => document.getElementById(id);
-const startBtn = $('startBtn'), stopBtn = $('stopBtn'), readerEl = $('reader'),
-      videoEl = $('video'), statusEl = $('status'), resultEl = $('result');
+const scanBtn = $('scanBtn'), tabSearch = $('tabSearch'), readerEl = $('reader'),
+      videoEl = $('video'), statusEl = $('status'), resultEl = $('result'),
+      searchView = $('searchView'), scanView = $('scanView'),
+      searchForm = $('searchForm'), qEl = $('q'), searchResults = $('searchResults');
 
 // ---- load rules + register service worker ----
 fetch('assets/rules.json').then(r => r.json()).then(j => rules = j).catch(() => rules = { additives: [], thresholds_per_100g: {}, nova_ultraprocessed_flag: 4 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-// ---- scanning ----
-startBtn.onclick = async () => {
+// ---- tabs ----
+function showSearch() {
+  stopScan();
+  scanView.classList.add('hidden');
+  searchView.classList.remove('hidden');
+  tabSearch.classList.add('active');
+}
+tabSearch.onclick = showSearch;
+
+// ---- scanning (dock centre button toggles) ----
+scanBtn.onclick = () => reader ? stopScan() : startScan();
+async function startScan() {
+  searchView.classList.add('hidden');
+  scanView.classList.remove('hidden');
+  tabSearch.classList.remove('active');
+  resultEl.innerHTML = '';
   reader = new ZXing.BrowserMultiFormatReader();
   readerEl.classList.remove('hidden');
-  startBtn.classList.add('hidden');
-  stopBtn.classList.remove('hidden');
-  resultEl.innerHTML = '';
   try {
     await reader.decodeFromConstraints(
       { video: { facingMode: 'environment' } }, videoEl,
@@ -32,14 +45,35 @@ startBtn.onclick = async () => {
     show(`Camera mislukt: ${e.name || e.message}${hint}`);
     stopScan();
   }
-};
-stopBtn.onclick = stopScan;
+}
 function stopScan() {
   if (reader) { reader.reset(); reader = null; }
   readerEl.classList.add('hidden');
-  stopBtn.classList.add('hidden');
-  startBtn.classList.remove('hidden');
 }
+
+// ---- product name search ----
+searchForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const q = qEl.value.trim();
+  if (!q) return;
+  qEl.blur();
+  resultEl.innerHTML = '';
+  searchResults.innerHTML = '<div class="spin">Zoeken…</div>';
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=15&fields=${FIELDS}`;
+    const j = await (await fetch(url)).json();
+    const items = (j.products || []).filter(p => p.product_name);
+    if (!items.length) { searchResults.innerHTML = '<div class="card glass muted">Niets gevonden.</div>'; return; }
+    searchResults.innerHTML = '<div class="card glass">' + items.map((p, i) => `
+      <div class="alt result-item" data-i="${i}" ${i === 0 ? 'style="border-top:0"' : ''}>
+        ${p.image_front_small_url ? `<img src="${p.image_front_small_url}">` : '<div style="width:44px;height:44px"></div>'}
+        <div style="flex:1"><div>${p.product_name}</div><div class="muted">${p.brands || ''}</div></div>
+        <span class="badge ${nsColor(p.nutriscore_grade)}">${(p.nutriscore_grade || '?').toUpperCase()}</span>
+      </div>`).join('') + '</div>';
+    searchResults.querySelectorAll('.result-item').forEach(el =>
+      el.onclick = () => { searchResults.innerHTML = ''; render(items[+el.dataset.i]); });
+  } catch (e) { searchResults.innerHTML = '<div class="card glass muted">Zoeken mislukt. Controleer je verbinding.</div>'; }
+};
 
 // ---- lookup ----
 async function lookup(ean) {
