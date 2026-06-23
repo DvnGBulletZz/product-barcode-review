@@ -1,0 +1,37 @@
+{
+  "_comment": "Tune this freely. 'additives' match Open Food Facts additives_tags (en:eNNN). Thresholds are per 100g, based on EU front-of-pack 'high' guidance. Severity: high|medium|low.",
+  "additives": [
+    { "code": "en:e102", "name": "Tartrazine (E102)", "severity": "high", "reason": "Kunstmatige kleurstof, kan hyperactiviteit beïnvloeden" },
+    { "code": "en:e104", "name": "Chinolinegeel (E104)", "severity": "high", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e110", "name": "Zonnegeel FCF (E110)", "severity": "high", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e122", "name": "Azorubine (E122)", "severity": "high", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e124", "name": "Ponceau 4R (E124)", "severity": "high", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e129", "name": "Allurarood AC (E129)", "severity": "high", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e131", "name": "Patentblauw V (E131)", "severity": "medium", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e133", "name": "Briljantblauw FCF (E133)", "severity": "medium", "reason": "Kunstmatige kleurstof" },
+    { "code": "en:e150d", "name": "Sulfietammoniakkaramel (E150d)", "severity": "medium", "reason": "Kan 4-MEI bevatten" },
+    { "code": "en:e171", "name": "Titaandioxide (E171)", "severity": "high", "reason": "In EU niet langer veilig geacht als levensmiddelenadditief" },
+    { "code": "en:e211", "name": "Natriumbenzoaat (E211)", "severity": "medium", "reason": "Conserveermiddel, met vitamine C vorming benzeen mogelijk" },
+    { "code": "en:e220", "name": "Zwaveldioxide (E220)", "severity": "medium", "reason": "Sulfiet, kan allergische reacties geven" },
+    { "code": "en:e249", "name": "Kaliumnitriet (E249)", "severity": "high", "reason": "Nitriet, gelinkt aan nitrosaminen" },
+    { "code": "en:e250", "name": "Natriumnitriet (E250)", "severity": "high", "reason": "Nitriet, gelinkt aan nitrosaminen" },
+    { "code": "en:e251", "name": "Natriumnitraat (E251)", "severity": "medium", "reason": "Nitraat" },
+    { "code": "en:e320", "name": "BHA (E320)", "severity": "high", "reason": "Antioxidant, mogelijk schadelijk" },
+    { "code": "en:e321", "name": "BHT (E321)", "severity": "high", "reason": "Antioxidant, mogelijk schadelijk" },
+    { "code": "en:e338", "name": "Fosforzuur (E338)", "severity": "low", "reason": "Veel in frisdrank, fosfaatbelasting" },
+    { "code": "en:e407", "name": "Carrageen (E407)", "severity": "medium", "reason": "Verdikkingsmiddel, darmirritatie mogelijk" },
+    { "code": "en:e621", "name": "Mononatriumglutamaat (E621)", "severity": "low", "reason": "Smaakversterker" },
+    { "code": "en:e951", "name": "Aspartaam (E951)", "severity": "medium", "reason": "Kunstmatige zoetstof" },
+    { "code": "en:e950", "name": "Acesulfaam-K (E950)", "severity": "medium", "reason": "Kunstmatige zoetstof" },
+    { "code": "en:e955", "name": "Sucralose (E955)", "severity": "medium", "reason": "Kunstmatige zoetstof" }
+  ],
+  "thresholds_per_100g": {
+    "sugars_high": 22.5,
+    "sugars_medium": 5.0,
+    "salt_high": 1.5,
+    "salt_medium": 0.3,
+    "saturated_fat_high": 5.0,
+    "saturated_fat_medium": 1.5
+  },
+  "nova_ultraprocessed_flag": 4
+}

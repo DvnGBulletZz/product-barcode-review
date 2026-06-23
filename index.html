@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scanner" />
+  <meta name="theme-color" content="#16a34a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <title>Product Scanner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: #0b0f0c; color: #f1f5f4;
+           padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); min-height: 100vh; }
+    h1 { font-size: 20px; padding: 14px 0; text-align: center; }
+    button { font: inherit; border: 0; border-radius: 14px; padding: 16px; width: 100%;
+             background: #16a34a; color: #fff; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #1f2937; }
+    #reader { width: 100%; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 12px; }
+    #reader video { width: 100% !important; height: auto !important; display: block; }
+    .hidden { display: none !important; }
+    .card { background: #111816; border: 1px solid #1f2a26; border-radius: 16px; padding: 16px; margin-top: 12px; }
+    .verdict { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .dot { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto; }
+    .green { background: #22c55e; } .orange { background: #f59e0b; } .red { background: #ef4444; }
+    .muted { color: #94a3a0; font-size: 13px; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+    .stat { background: #0e1412; border-radius: 12px; padding: 10px; text-align: center; }
+    .stat b { display: block; font-size: 17px; } .stat span { font-size: 11px; color: #94a3a0; }
+    .flag { padding: 8px 10px; border-radius: 10px; margin-top: 6px; font-size: 13px; }
+    .flag.high { background: #3a1413; border: 1px solid #ef444455; }
+    .flag.medium { background: #3a2c10; border: 1px solid #f59e0b55; }
+    .flag.low { background: #16201c; border: 1px solid #334155; }
+    .alt { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #1f2a26; }
+    .alt img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: #fff; }
+    .badge { font-weight: 700; text-transform: uppercase; border-radius: 8px; padding: 2px 8px; font-size: 12px; }
+    h3 { font-size: 15px; margin-top: 14px; }
+    .spin { text-align: center; padding: 20px; color: #94a3a0; }
+  </style>
+</head>
+<body>
+  <h1>🛒 Product Scanner</h1>
+
+  <div id="reader" class="hidden"></div>
+  <button id="startBtn">📷 Scan barcode</button>
+  <button id="stopBtn" class="secondary hidden" style="margin-top:8px">Stop scannen</button>
+
+  <div id="status" class="spin hidden"></div>
+  <div id="result"></div>
+
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

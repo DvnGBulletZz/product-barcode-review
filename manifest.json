@@ -1,0 +1,11 @@
+{
+  "name": "Product Scanner",
+  "short_name": "Scanner",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0f0c",
+  "theme_color": "#16a34a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
